@@ -24,7 +24,4 @@ The **Stock Portfolio Manager** is a React-based web application that allows use
 
 ### 1️⃣ Clone the Repository
 
-```bash
-git clone https://github.com/your-username/stock-portfolio-manager.git
-cd stock-portfolio-manager
-```
+https://github.com/Jfloyd7720/Stock-Portfolio-Tracker.git
