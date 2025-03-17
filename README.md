@@ -1,12 +1,16 @@
-# React + Vite
+Stock Portfolio Manager
+📌 Overview
+The Stock Portfolio Manager is a React-based web application that allows users to:
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Search for stock information using Financial Modeling Prep (FMP) API.
+View stock price charts for the last 10 days.
+Stay updated with the latest stock market news.
+🚀 Features
+✅ Stock Search – Search for real-time stock prices using FMP API.
+✅ Stock Chart – View a graphical representation of stock prices over the last 10 days.
+✅ News Section – Fetches the latest financial news from FMP API.
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript and enable type-aware lint rules. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+🛠️ Tech Stack
+Frontend: React, Ant Design, Chart.js
+API: Financial Modeling Prep (FMP) API
+Styling: CSS, Ant Design
