@@ -1,0 +1,15 @@
+* {
+  background-color: #3577f6;
+  color: aliceblue;
+  font-family: "Roboto", sans-serif;
+  font-optical-sizing: auto;
+  text-align: center;
+  font-size: 30px;
+}
+.header {
+  justify-content: center;
+  align-items: center;
+  text-align: left;
+  height: 40px;
+  display: flex;
+}

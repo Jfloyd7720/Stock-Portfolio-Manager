@@ -1,0 +1,9 @@
+.img {
+  justify-content: center;
+  align-self: center;
+}
+.ooo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
