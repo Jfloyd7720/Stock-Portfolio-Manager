@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Line } from "react-chartjs-2"; // Import Line chart from chart.js
+import { Line } from "react-chartjs-2";
 import axios from "axios";
 import { Card, message, Spin } from "antd";
 import {
@@ -13,7 +13,7 @@ import {
   Legend,
 } from "chart.js";
 
-// Register the necessary Chart.js components
+// Register Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -24,40 +24,40 @@ ChartJS.register(
   Legend
 );
 
-const StockChart = ({ symbol = "TSLA" }) => {
+const StockChart = ({ symbol, days }) => {
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(true);
   const FMP_API_KEY = "bvGShko3CAWKMcOe6vQ9hew2nQOgrAFY"; // Replace with your FMP API key
 
   useEffect(() => {
+    if (!symbol) return;
+
     const fetchStockData = async () => {
       try {
         const response = await axios.get(
           `https://financialmodelingprep.com/api/v3/historical-price-full/${symbol}`,
           {
-            params: {
-              apikey: FMP_API_KEY, // Add your API key
-            },
+            params: { apikey: FMP_API_KEY },
           }
         );
 
         const data = response.data.historical;
         if (data) {
-          // Reverse the data so the most recent date is last in the chart
+          // Get the last selected number of days and reverse order for display
           const labels = data
-            .slice(0, 10)
+            .slice(0, days)
             .map((entry) => entry.date)
-            .reverse(); // Reverse the order of dates
+            .reverse();
           const prices = data
-            .slice(0, 10)
+            .slice(0, days)
             .map((entry) => entry.close)
-            .reverse(); // Reverse the order of prices
+            .reverse();
 
           setChartData({
             labels,
             datasets: [
               {
-                label: `${symbol} Stock Price (Last 10 Days)`,
+                label: `${symbol} Stock Price (Last ${days} Days)`,
                 data: prices,
                 borderColor: "rgba(75, 192, 192, 1)",
                 tension: 0.1,
@@ -76,7 +76,7 @@ const StockChart = ({ symbol = "TSLA" }) => {
     };
 
     fetchStockData();
-  }, [symbol]); // Trigger fetch when the symbol changes
+  }, [symbol, days]);
 
   if (loading) {
     return <Spin style={{ marginTop: "20px" }} />;

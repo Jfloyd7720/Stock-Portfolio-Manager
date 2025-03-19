@@ -1,16 +1,15 @@
 import React, { useState } from "react";
 import { Layout } from "antd";
-import StockSearch from "./StockSearch"; // Import the StockSearch component
-import StockChart from "./StockChart"; // Import the StockChart component
+import { useNavigate } from "react-router-dom";
+import StockSearch from "./StockSearch";
+import StockChart from "./StockChart";
 
 const { Content } = Layout;
 
 const Home = () => {
-  const [symbol, setSymbol] = useState("TSLA"); // Default to "TSLA"
-
-  const handleSymbolChange = (newSymbol) => {
-    setSymbol(newSymbol);
-  };
+  const navigate = useNavigate();
+  const [selectedSymbol, setSelectedSymbol] = useState("TSLA");
+  const [selectedDays, setSelectedDays] = useState(10); // Default 10 days
 
   return (
     <Content
@@ -31,9 +30,11 @@ const Home = () => {
         <p style={{ fontSize: "16px", color: "#555", marginBottom: "20px" }}>
           Track and calculate your stock investments with ease.
         </p>
-        <StockSearch onSymbolChange={handleSymbolChange} />{" "}
-        {/* Pass handleSymbolChange to StockSearch */}
-        <StockChart symbol={symbol} /> {/* Pass the symbol to StockChart */}
+        <StockSearch
+          onSymbolChange={setSelectedSymbol}
+          onDaysChange={setSelectedDays}
+        />
+        <StockChart symbol={selectedSymbol} days={selectedDays} />
       </div>
     </Content>
   );
