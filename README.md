@@ -7,8 +7,8 @@ The **Stock Portfolio Manager** is a React-based web application that allows use
 - 🔍 **Search for stock information** using the **Financial Modeling Prep (FMP) API**.
 - 📊 **View and filter stock price charts** for a selected number of days.
 - 🧮 **Use a stock calculator** to determine how many shares they can buy and calculate their new average price.
-- 🥧 **Visualize portfolio allocation** with a pie chart displaying investments vs. free cash.
-- 📈 **Manage their stock portfolio** by adding stocks and analyzing performance.
+- 🥧 **Visualise portfolio allocation** with a pie chart displaying investments vs. free cash.
+- 📈 **Manage their stock portfolio** by adding stocks and analysing performance.
 - 📊 **View detailed insights** on portfolio performance, including best & worst performers and portfolio distribution by sector.
 
 ## 🚀 Features
@@ -16,7 +16,7 @@ The **Stock Portfolio Manager** is a React-based web application that allows use
 - **Stock Search** – Search for real-time stock prices using FMP API.
 - **Stock Chart** – View and filter stock price trends for a custom time range.
 - **Stock Calculator** – Calculate potential purchases and track average cost per share.
-- **Portfolio Management** – Add stocks, track holdings, and analyze performance.
+- **Portfolio Management** – Add stocks, track holdings, and analyse performance.
 - **Portfolio Insights** – Charts displaying best/worst performers and sector-based allocation.
 - **News Section** – Fetches the latest financial news from FMP API.
 
