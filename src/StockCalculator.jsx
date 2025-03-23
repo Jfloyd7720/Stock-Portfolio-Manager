@@ -52,6 +52,11 @@ const StockCalculator = () => {
         label: "Total Shares",
         value: `${totalShares.toFixed(2)}`,
       },
+      {
+        key: "4",
+        label: "Cost of New Shares (£)",
+        value: `£${((addShares * addPrice) / exchangeRate).toFixed(2)}`,
+      },
     ]);
 
     // Chart data for Shares Before & After
