@@ -1,19 +1,32 @@
-# Northstar Markets 📈
+# Backtest Lab 📊
 
-A polished React trading-terminal style dashboard for exploring a paper portfolio, tracking a watchlist, and visualising simulated market data.
+A beginner-friendly historical trading terminal for US equities. Load real historical OHLCV data, inspect candlesticks, replay the tape one candle at a time, place simulated trades, build indicator rules visually, and measure strategy performance.
 
-## Highlights
+## What is included
 
-- Dark, terminal-inspired UI with responsive layout
-- Portfolio value, buying power and risk cards
-- Interactive stock watchlist and selected-ticker chart
-- Paper-trade button with simulated order feedback
-- Holdings allocation and portfolio concentration insight
-- No real brokerage integration and no live trading
+- US stock ticker search
+- Daily/weekly/monthly history plus free-source intraday intervals where available
+- Candlestick chart with EMA 20, SMA 50 and EMA 200 overlays
+- Historical chart replay mode with a candle-by-candle slider
+- Paper order ticket: long/short, market/limit/stop, sizing, leverage, stop loss, take profit, slippage and commissions
+- Visual strategy builder using Price, SMA, EMA, RSI and ATR rules
+- Event-driven backtesting with next-bar execution to reduce look-ahead bias
+- Performance report: net P&L, return, win rate, profit factor, max drawdown, Sharpe, Sortino, expectancy, fees and average win/loss
+- Per-session simulated trade ledger
+- No login, no brokerage integration, no real-money execution
 
-## Stack
+## Free-data limitation
 
-React 19 · Vite · Ant Design · Chart.js · Yahoo Finance tooling
+The app deliberately does **not** claim that five years of free 1-minute candles are available. The browser uses Yahoo's public chart endpoint without a paid API key. Its intraday history is rolling/limited, while daily/weekly/monthly history supports the requested multi-year research window. The UI shows the source limitation instead of silently filling missing history with fake data.
+
+Yahoo's current documentation is not a formal public developer SLA, so this adapter should be treated as a personal research/data-source integration. A future provider adapter can be added without rewriting the chart or backtest engine.
+
+## Backtest assumptions
+
+- Signals are evaluated using information available through the previous completed bar; entries execute at the next bar's open with configurable slippage.
+- Commission and slippage are included in P&L.
+- Stop loss and take profit are checked against each bar's high/low. If both are touched in the same candle, the stop is evaluated first as the conservative assumption.
+- Results are simulations, not forecasts.
 
 ## Run locally
 
@@ -22,12 +35,12 @@ npm install
 npm run dev
 ```
 
-Then open the local Vite URL shown in your terminal.
+Then open the Vite URL shown in your terminal.
 
-## Environment
+## Stack
 
-Copy `.env.example` to `.env.local` if you add a market-data provider. Never commit real API keys. The current dashboard uses simulated values, so it works without credentials.
+React 19 · Vite · browser Fetch API · SVG charting · client-side backtest engine
 
 ## Disclaimer
 
-This project is for education and portfolio-development purposes. It is a paper-trading interface and does not provide investment advice or execute real trades.
+This project is for education and research. It is 100% simulated and does not provide investment advice or execute real trades.
