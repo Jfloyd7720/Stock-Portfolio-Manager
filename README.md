@@ -1,49 +1,33 @@
-# 📈 Stock Portfolio Manager
+# Northstar Markets 📈
 
-## 📌 Overview
+A polished React trading-terminal style dashboard for exploring a paper portfolio, tracking a watchlist, and visualising simulated market data.
 
-The **Stock Portfolio Manager** is a React-based web application that allows users to:
+## Highlights
 
-- 🔍 **Search for stock information** using the **Financial Modeling Prep (FMP) API**.
-- 📊 **View and filter stock price charts** for a selected number of days.
-- 🧮 **Use a stock calculator** to determine how many shares they can buy and calculate their new average price.
-- 🥧 **Visualise portfolio allocation** with a pie chart displaying investments vs. free cash.
-- 📈 **Manage their stock portfolio** by adding stocks and analysing performance.
-- 📊 **View detailed insights** on portfolio performance, including best & worst performers and portfolio distribution by sector.
+- Dark, terminal-inspired UI with responsive layout
+- Portfolio value, buying power and risk cards
+- Interactive stock watchlist and selected-ticker chart
+- Paper-trade button with simulated order feedback
+- Holdings allocation and portfolio concentration insight
+- No real brokerage integration and no live trading
 
-## 🚀 Features
+## Stack
 
-- **Stock Search** – Search for real-time stock prices using FMP API.
-- **Stock Chart** – View and filter stock price trends for a custom time range.
-- **Stock Calculator** – Calculate potential purchases and track average cost per share.
-- **Portfolio Management** – Add stocks, track holdings, and analyse performance.
-- **Portfolio Insights** – Charts displaying best/worst performers and sector-based allocation.
-- **News Section** – Fetches the latest financial news from FMP API.
+React 19 · Vite · Ant Design · Chart.js · Yahoo Finance tooling
 
-## 🛠️ Tech Stack
+## Run locally
 
-- **Frontend:** React, Ant Design, Chart.js
-- **API:** Financial Modeling Prep (FMP) API
-- **Styling:** CSS, Ant Design
+```bash
+npm install
+npm run dev
+```
 
-## 📦 Installation
+Then open the local Vite URL shown in your terminal.
 
-1. Clone the Repository:  
-   `git clone https://github.com/Jfloyd7720/Stock-Portfolio-Tracker.git`
+## Environment
 
-2. Navigate to the Project Directory:  
-   `cd Stock-Portfolio-Tracker`
+Copy `.env.example` to `.env.local` if you add a market-data provider. Never commit real API keys. The current dashboard uses simulated values, so it works without credentials.
 
-3. Install Dependencies:  
-   `npm install`
+## Disclaimer
 
-4. Start the Development Server:  
-   `npm start`
-
-## 📸 Screenshots
-
-![Home Page](./src/assets/screenshots/Home.png)
-![Portfolio Page](./src/assets/screenshots/Calculator.png)
-![Calculator Page](./src/assets/screenshots/Portfolio.png)
-
----
+This project is for education and portfolio-development purposes. It is a paper-trading interface and does not provide investment advice or execute real trades.
