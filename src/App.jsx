@@ -7,26 +7,215 @@ const money = value => new Intl.NumberFormat('en-US', { style: 'currency', curre
 const num = value => new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value || 0)
 const fmtDate = time => new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(time))
 const fmtTime = time => new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(time))
+
 const defaultCondition = { indicator: 'ema', period: 20, operator: '>', rightType: 'indicator', rightIndicator: 'ema', rightPeriod: 50, value: 0 }
-const presets = { 'EMA trend': [defaultCondition], 'RSI oversold': [{ indicator: 'rsi', period: 14, operator: '<', rightType: 'value', value: 30 }], 'Price above SMA': [{ indicator: 'price', period: 1, operator: '>', rightType: 'indicator', rightIndicator: 'sma', rightPeriod: 50, value: 0 }] }
+const presets = {
+  'EMA trend': [defaultCondition],
+  'RSI oversold': [{ indicator: 'rsi', period: 14, operator: '<', rightType: 'value', value: 30 }],
+  'Price above SMA': [{ indicator: 'price', period: 1, operator: '>', rightType: 'indicator', rightIndicator: 'sma', rightPeriod: 50, value: 0 }],
+}
 
-function IndicatorLine({ bars, type, period, colorClass = '' }) { const values = bars.map(b => b.close); const series = type === 'ema' ? ema(values, period) : type === 'sma' ? sma(values, period) : type === 'rsi' ? rsi(values, period) : atr(bars, period); const valid = series.map((v, i) => v == null ? null : [i, v]).filter(Boolean); if (!valid.length) return null; const min = Math.min(...valid.map(x => x[1])); const max = Math.max(...valid.map(x => x[1])); const span = max - min || 1; return <polyline className={`indicator-line ${colorClass}`} points={valid.map(([i, value]) => `${(i / Math.max(1, bars.length - 1)) * 1000},${300 - ((value - min) / span) * 300}`).join(' ')} /> }
+function IndicatorLine({ bars, type, period, colorClass = '' }) {
+  const values = bars.map(b => b.close)
+  const series = type === 'ema' ? ema(values, period) : type === 'sma' ? sma(values, period) : type === 'rsi' ? rsi(values, period) : atr(bars, period)
+  const valid = series.map((v, i) => v == null ? null : [i, v]).filter(Boolean)
+  if (!valid.length) return null
+  const min = Math.min(...valid.map(x => x[1]))
+  const max = Math.max(...valid.map(x => x[1]))
+  const span = max - min || 1
+  return <polyline className={`indicator-line ${colorClass}`} points={valid.map(([i, value]) => `${(i / Math.max(1, bars.length - 1)) * 1000},${300 - ((value - min) / span) * 300}`).join(' ')} />
+}
 
-function CandleChart({ bars, replayIndex, setReplayIndex, order, setOrder, activeIndicators }) { const visible = bars.slice(Math.max(0, replayIndex - 100), replayIndex + 1); if (!visible.length) return <div className="empty-chart">Load a ticker to see historical candles.</div>; const hi = Math.max(...visible.map(b => b.high)); const lo = Math.min(...visible.map(b => b.low)); const span = hi - lo || 1; const x = i => (i / Math.max(1, visible.length - 1)) * 1000; const y = price => 300 - ((price - lo) / span) * 300; const handleChartClick = event => { const rect = event.currentTarget.getBoundingClientRect(); const px = (event.clientX - rect.left) / rect.width; const idx = Math.round(px * (visible.length - 1)); const bar = visible[Math.max(0, Math.min(visible.length - 1, idx))]; setOrder(current => ({ ...current, limitPrice: bar.close.toFixed(2), stopLoss: (bar.close * 0.98).toFixed(2), takeProfit: (bar.close * 1.04).toFixed(2) })) }; return <div className="chart-area"><div className="chart-meta"><span>{fmtTime(visible[0].time)} → {fmtTime(visible.at(-1).time)}</span><span>{visible.length} candles · click chart to set prices</span></div><div className="chart-svg-wrap" onClick={handleChartClick}><svg viewBox="0 0 1000 300" preserveAspectRatio="none" className="candle-chart">{[0,75,150,225,300].map(yPos => <line key={yPos} x1="0" x2="1000" y1={yPos} y2={yPos} className="grid" />)}{visible.map((bar, i) => { const bodyTop = y(Math.max(bar.open, bar.close)); const bodyBottom = y(Math.min(bar.open, bar.close)); const candleW = Math.max(2, 720 / visible.length); return <g key={bar.time} className={bar.close >= bar.open ? 'up' : 'down'}><line x1={x(i)} x2={x(i)} y1={y(bar.high)} y2={y(bar.low)} /><rect x={x(i) - candleW / 2} y={bodyTop} width={candleW} height={Math.max(1.5, bodyBottom - bodyTop)} rx="1" /></g> })}{activeIndicators.includes('ema20') && <IndicatorLine bars={visible} type="ema" period={20} colorClass="ema20" />}{activeIndicators.includes('sma50') && <IndicatorLine bars={visible} type="sma" period={50} colorClass="sma50" />}{activeIndicators.includes('ema200') && <IndicatorLine bars={visible} type="ema" period={200} colorClass="ema200" />}{order.limitPrice && <line x1="0" x2="1000" y1={y(Number(order.limitPrice))} y2={y(Number(order.limitPrice))} className="order-line entry" />}{order.stopLoss && <line x1="0" x2="1000" y1={y(Number(order.stopLoss))} y2={y(Number(order.stopLoss))} className="order-line stop" />}{order.takeProfit && <line x1="0" x2="1000" y1={y(Number(order.takeProfit))} y2={y(Number(order.takeProfit))} className="order-line target" />}</svg><div className="price-axis"><span>{money(hi)}</span><span>{money((hi + lo) / 2)}</span><span>{money(lo)}</span></div></div><input className="replay-slider" type="range" min="0" max={Math.max(0, bars.length - 1)} value={replayIndex} onChange={e => setReplayIndex(Number(e.target.value))} /><div className="chart-footer"><span>{visible.at(-1) ? fmtDate(visible.at(-1).time) : '—'}</span><span>Replay position {replayIndex + 1}/{bars.length}</span></div></div> }
+function CandleChart({ bars, replayIndex, setReplayIndex, order, setOrder, activeIndicators }) {
+  const visible = bars.slice(Math.max(0, replayIndex - 100), replayIndex + 1)
+  if (!visible.length) return <div className="empty-chart">Load a ticker to see historical candles.</div>
+  const hi = Math.max(...visible.map(b => b.high))
+  const lo = Math.min(...visible.map(b => b.low))
+  const span = hi - lo || 1
+  const x = i => (i / Math.max(1, visible.length - 1)) * 1000
+  const y = price => 300 - ((price - lo) / span) * 300
+  const handleChartClick = event => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const px = (event.clientX - rect.left) / rect.width
+    const idx = Math.round(px * (visible.length - 1))
+    const bar = visible[Math.max(0, Math.min(visible.length - 1, idx))]
+    setOrder(current => ({ ...current, limitPrice: bar.close.toFixed(2), stopLoss: (bar.close * 0.98).toFixed(2), takeProfit: (bar.close * 1.04).toFixed(2) }))
+  }
+  return (
+    <div className="chart-area">
+      <div className="chart-meta"><span>{fmtTime(visible[0].time)} → {fmtTime(visible.at(-1).time)}</span><span>{visible.length} candles · click chart to set prices</span></div>
+      <div className="chart-svg-wrap" onClick={handleChartClick}>
+        <svg viewBox="0 0 1000 300" preserveAspectRatio="none" className="candle-chart">
+          {[0, 75, 150, 225, 300].map(yPos => <line key={yPos} x1="0" x2="1000" y1={yPos} y2={yPos} className="grid" />)}
+          {visible.map((bar, i) => {
+            const bodyTop = y(Math.max(bar.open, bar.close))
+            const bodyBottom = y(Math.min(bar.open, bar.close))
+            const candleW = Math.max(2, 720 / visible.length)
+            return <g key={bar.time} className={bar.close >= bar.open ? 'up' : 'down'}><line x1={x(i)} x2={x(i)} y1={y(bar.high)} y2={y(bar.low)} /><rect x={x(i) - candleW / 2} y={bodyTop} width={candleW} height={Math.max(1.5, bodyBottom - bodyTop)} rx="1" /></g>
+          })}
+          {activeIndicators.includes('ema20') && <IndicatorLine bars={visible} type="ema" period={20} colorClass="ema20" />}
+          {activeIndicators.includes('sma50') && <IndicatorLine bars={visible} type="sma" period={50} colorClass="sma50" />}
+          {activeIndicators.includes('ema200') && <IndicatorLine bars={visible} type="ema" period={200} colorClass="ema200" />}
+          {order.limitPrice && <line x1="0" x2="1000" y1={y(Number(order.limitPrice))} y2={y(Number(order.limitPrice))} className="order-line entry" />}
+          {order.stopLoss && <line x1="0" x2="1000" y1={y(Number(order.stopLoss))} y2={y(Number(order.stopLoss))} className="order-line stop" />}
+          {order.takeProfit && <line x1="0" x2="1000" y1={y(Number(order.takeProfit))} y2={y(Number(order.takeProfit))} className="order-line target" />}
+        </svg>
+        <div className="price-axis"><span>{money(hi)}</span><span>{money((hi + lo) / 2)}</span><span>{money(lo)}</span></div>
+      </div>
+      <input className="replay-slider" type="range" min="0" max={Math.max(0, bars.length - 1)} value={replayIndex} onChange={e => setReplayIndex(Number(e.target.value))} />
+      <div className="chart-footer"><span>{visible.at(-1) ? fmtDate(visible.at(-1).time) : '—'}</span><span>Replay position {replayIndex + 1}/{bars.length}</span></div>
+    </div>
+  )
+}
 
-function OrderTicket({ order, setOrder, currentPrice, onTrade }) { const set = (key, value) => setOrder(prev => ({ ...prev, [key]: value })); return <aside className="order-ticket"><div className="ticket-head"><div><span className="eyebrow">SIMULATED ORDER</span><h3>Trade {order.symbol}</h3></div><span className="paper-pill">PAPER</span></div><div className="buy-sell"><button className={order.side === 'long' ? 'selected buy' : ''} onClick={() => set('side', 'long')}>Buy / Long</button><button className={order.side === 'short' ? 'selected sell' : ''} onClick={() => set('side', 'short')}>Sell / Short</button></div><label>Order type<select value={order.type} onChange={e => set('type', e.target.value)}><option value="market">Market</option><option value="limit">Limit</option><option value="stop">Stop</option></select></label>{order.type !== 'market' && <label>Trigger price<input value={order.limitPrice} onChange={e => set('limitPrice', e.target.value)} /></label>}<div className="two-col"><label>Size %<input type="number" min="1" max="100" value={order.sizePct} onChange={e => set('sizePct', e.target.value)} /></label><label>Leverage<input type="number" min="1" max="4" value={order.leverage} onChange={e => set('leverage', e.target.value)} /></label></div><div className="two-col"><label>Stop loss %<input type="number" min="0" step="0.1" value={order.stopPct} onChange={e => set('stopPct', e.target.value)} /></label><label>Take profit %<input type="number" min="0" step="0.1" value={order.targetPct} onChange={e => set('targetPct', e.target.value)} /></label></div><div className="ticket-preview"><span>Current price</span><strong>{money(currentPrice)}</strong><small>Slippage: {order.slippageBps} bps · Commission: {order.commissionPct}%</small></div><button className="execute" onClick={() => onTrade(order)}>Place simulated trade</button><p className="ticket-help">Nothing here can place a real order. Trades exist only inside this browser session.</p></aside> }
+function OrderTicket({ order, setOrder, currentPrice, onTrade }) {
+  const set = (key, value) => setOrder(prev => ({ ...prev, [key]: value }))
+  return (
+    <aside className="order-ticket">
+      <div className="ticket-head"><div><span className="eyebrow">SIMULATED ORDER</span><h3>Trade {order.symbol}</h3></div><span className="paper-pill">PAPER</span></div>
+      <div className="buy-sell"><button className={order.side === 'long' ? 'selected buy' : ''} onClick={() => set('side', 'long')}>Buy / Long</button><button className={order.side === 'short' ? 'selected sell' : ''} onClick={() => set('side', 'short')}>Sell / Short</button></div>
+      <label>Order type<select value={order.type} onChange={e => set('type', e.target.value)}><option value="market">Market</option><option value="limit">Limit</option><option value="stop">Stop</option></select></label>
+      {order.type !== 'market' && <label>Trigger price<input value={order.limitPrice} onChange={e => set('limitPrice', e.target.value)} /></label>}
+      <div className="two-col"><label>Size %<input type="number" min="1" max="100" value={order.sizePct} onChange={e => set('sizePct', e.target.value)} /></label><label>Leverage<input type="number" min="1" max="4" value={order.leverage} onChange={e => set('leverage', e.target.value)} /></label></div>
+      <div className="two-col"><label>Stop loss %<input type="number" min="0" step="0.1" value={order.stopPct} onChange={e => set('stopPct', e.target.value)} /></label><label>Take profit %<input type="number" min="0" step="0.1" value={order.targetPct} onChange={e => set('targetPct', e.target.value)} /></label></div>
+      <div className="ticket-preview"><span>Current price</span><strong>{money(currentPrice)}</strong><small>Slippage: {order.slippageBps} bps · Commission: {order.commissionPct}%</small></div>
+      <button className="execute" onClick={() => onTrade(order)}>Place simulated trade</button>
+      <p className="ticket-help">Nothing here can place a real order. Trades exist only inside this browser session.</p>
+    </aside>
+  )
+}
 
-function Metrics({ result }) { const m = result?.metrics; if (!m) return <div className="metrics-empty">Run a backtest to populate the performance report.</div>; const cards = [['Net P&L', money(m.pnl)], ['Return', `${m.returnPct.toFixed(2)}%`], ['Win rate', `${m.winRate.toFixed(1)}%`], ['Profit factor', Number.isFinite(m.profitFactor) ? m.profitFactor.toFixed(2) : '∞'], ['Max drawdown', `${m.maxDrawdown.toFixed(2)}%`], ['Sharpe', m.sharpe.toFixed(2)], ['Expectancy', money(m.expectancy)], ['Trades', m.trades]]; return <div className="metric-grid">{cards.map(([label, value]) => <div className="metric" key={label}><span>{label}</span><strong className={label === 'Net P&L' ? (m.pnl >= 0 ? 'positive' : 'negative') : ''}>{value}</strong></div>)}</div> }
+function Metrics({ result }) {
+  const m = result?.metrics
+  if (!m) return <div className="metrics-empty">Run a backtest to populate the performance report.</div>
+  const cards = [['Net P&L', money(m.pnl)], ['Return', `${m.returnPct.toFixed(2)}%`], ['Win rate', `${m.winRate.toFixed(1)}%`], ['Profit factor', Number.isFinite(m.profitFactor) ? m.profitFactor.toFixed(2) : '∞'], ['Max drawdown', `${m.maxDrawdown.toFixed(2)}%`], ['Sharpe', m.sharpe.toFixed(2)], ['Expectancy', money(m.expectancy)], ['Trades', m.trades]]
+  return <div className="metric-grid">{cards.map(([label, value]) => <div className="metric" key={label}><span>{label}</span><strong className={label === 'Net P&L' ? (m.pnl >= 0 ? 'positive' : 'negative') : ''}>{value}</strong></div>)}</div>
+}
 
-function StrategyBuilder({ conditions, setConditions }) { const update = (index, patch) => setConditions(current => current.map((item, i) => i === index ? { ...item, ...patch } : item)); const add = () => setConditions(current => [...current, { ...defaultCondition }]); return <div className="strategy-builder"><div className="builder-intro"><div><span className="eyebrow">VISUAL STRATEGY BUILDER</span><h2>Build rules, no code required.</h2></div><button className="ghost" onClick={add}>+ Add rule</button></div><div className="rule-list">{conditions.map((condition, index) => <div className="rule" key={index}><span className="rule-index">{index + 1}</span><select value={condition.indicator} onChange={e => update(index, { indicator: e.target.value })}><option value="price">Price</option><option value="sma">SMA</option><option value="ema">EMA</option><option value="rsi">RSI</option><option value="atr">ATR</option></select>{['sma','ema','rsi','atr'].includes(condition.indicator) && <input className="period" type="number" min="2" value={condition.period} onChange={e => update(index, { period: e.target.value })} />}<select value={condition.operator} onChange={e => update(index, { operator: e.target.value })}><option>&gt;</option><option>&lt;</option><option>&gt;=</option><option>&lt;=</option><option>=</option></select><select value={condition.rightType} onChange={e => update(index, { rightType: e.target.value })}><option value="indicator">Indicator</option><option value="value">Fixed value</option><option value="price">Price</option></select>{condition.rightType === 'indicator' && <><select value={condition.rightIndicator} onChange={e => update(index, { rightIndicator: e.target.value })}><option value="sma">SMA</option><option value="ema">EMA</option><option value="rsi">RSI</option><option value="atr">ATR</option></select><input className="period" type="number" min="2" value={condition.rightPeriod} onChange={e => update(index, { rightPeriod: e.target.value })} /></>}{condition.rightType === 'value' && <input type="number" value={condition.value} onChange={e => update(index, { value: e.target.value })} />}<button className="remove-rule" onClick={() => setConditions(current => current.filter((_, i) => i !== index))}>×</button></div>)}</div><div className="preset-row">{Object.keys(presets).map(name => <button key={name} onClick={() => setConditions(presets[name].map(item => ({ ...item })))}>{name}</button>)}</div></div> }
+function StrategyBuilder({ conditions, setConditions }) {
+  const update = (index, patch) => setConditions(current => current.map((item, i) => i === index ? { ...item, ...patch } : item))
+  const add = () => setConditions(current => [...current, { ...defaultCondition }])
+  return (
+    <div className="strategy-builder">
+      <div className="builder-intro"><div><span className="eyebrow">VISUAL STRATEGY BUILDER</span><h2>Build rules, no code required.</h2></div><button className="ghost" onClick={add}>+ Add rule</button></div>
+      <div className="rule-list">
+        {conditions.map((condition, index) => (
+          <div className="rule" key={index}>
+            <span className="rule-index">{index + 1}</span>
+            <select value={condition.indicator} onChange={e => update(index, { indicator: e.target.value })}><option value="price">Price</option><option value="sma">SMA</option><option value="ema">EMA</option><option value="rsi">RSI</option><option value="atr">ATR</option></select>
+            {['sma', 'ema', 'rsi', 'atr'].includes(condition.indicator) && <input className="period" type="number" min="2" value={condition.period} onChange={e => update(index, { period: e.target.value })} />}
+            <select value={condition.operator} onChange={e => update(index, { operator: e.target.value })}><option>&gt;</option><option>&lt;</option><option>&gt;=</option><option>&lt;=</option><option>=</option></select>
+            <select value={condition.rightType} onChange={e => update(index, { rightType: e.target.value })}><option value="indicator">Indicator</option><option value="value">Fixed value</option><option value="price">Price</option></select>
+            {condition.rightType === 'indicator' && <><select value={condition.rightIndicator} onChange={e => update(index, { rightIndicator: e.target.value })}><option value="sma">SMA</option><option value="ema">EMA</option><option value="rsi">RSI</option><option value="atr">ATR</option></select><input className="period" type="number" min="2" value={condition.rightPeriod} onChange={e => update(index, { rightPeriod: e.target.value })} /></>}
+            {condition.rightType === 'value' && <input type="number" value={condition.value} onChange={e => update(index, { value: e.target.value })} />}
+            <button className="remove-rule" onClick={() => setConditions(current => current.filter((_, i) => i !== index))}>×</button>
+          </div>
+        ))}
+      </div>
+      <div className="preset-row">{Object.keys(presets).map(name => <button key={name} onClick={() => setConditions(presets[name].map(item => ({ ...item })))}>{name}</button>)}</div>
+    </div>
+  )
+}
 
 export default function App() {
-  const [symbol, setSymbol] = useState('AAPL'); const [interval, setInterval] = useState('1d'); const [bars, setBars] = useState([]); const [loading, setLoading] = useState(false); const [error, setError] = useState(''); const [replay, setReplay] = useState(false); const [replayIndex, setReplayIndex] = useState(0); const [tab, setTab] = useState('chart'); const [conditions, setConditions] = useState([{ ...defaultCondition }]); const [result, setResult] = useState(null); const [activeIndicators, setActiveIndicators] = useState(['ema20', 'sma50']); const [startingCapital, setStartingCapital] = useState(100000); const [order, setOrder] = useState({ symbol: 'AAPL', side: 'long', type: 'market', limitPrice: '', stopLoss: '', takeProfit: '', sizePct: 10, leverage: 1, stopPct: 2, targetPct: 4, slippageBps: 5, commissionPct: 0.01 }); const [trades, setTrades] = useState([])
-  const selectedMeta = INTERVALS.find(item => item.value === interval) || INTERVALS[5]; const visibleBars = replay ? bars.slice(0, replayIndex + 1) : bars; const currentBar = visibleBars.at(-1)
-  const load = async (nextSymbol = symbol, nextInterval = interval) => { setLoading(true); setError(''); setResult(null); try { const clean = nextSymbol.trim().toUpperCase(); setSymbol(clean); setOrder(prev => ({ ...prev, symbol: clean })); const data = await loadBars(clean, nextInterval); setBars(data); setReplayIndex(Math.max(0, data.length - 1)); setTrades([]) } catch (err) { setBars([]); setError(err.message || 'Unable to load market data.') } finally { setLoading(false) } }
+  const [symbol, setSymbol] = useState('AAPL')
+  const [interval, setInterval] = useState('1d')
+  const [bars, setBars] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [replay, setReplay] = useState(false)
+  const [replayIndex, setReplayIndex] = useState(0)
+  const [tab, setTab] = useState('chart')
+  const [conditions, setConditions] = useState([{ ...defaultCondition }])
+  const [result, setResult] = useState(null)
+  const [activeIndicators, setActiveIndicators] = useState(['ema20', 'sma50'])
+  const [startingCapital, setStartingCapital] = useState(100000)
+  const [order, setOrder] = useState({ symbol: 'AAPL', side: 'long', type: 'market', limitPrice: '', stopLoss: '', takeProfit: '', sizePct: 10, leverage: 1, stopPct: 2, targetPct: 4, slippageBps: 5, commissionPct: 0.01 })
+  const [trades, setTrades] = useState([])
+
+  const selectedMeta = INTERVALS.find(item => item.value === interval) || INTERVALS[6]
+  const visibleBars = replay ? bars.slice(0, replayIndex + 1) : bars
+  const currentBar = visibleBars.at(-1)
+
+  const load = async (nextSymbol = symbol, nextInterval = interval) => {
+    setLoading(true)
+    setError('')
+    setResult(null)
+    try {
+      const clean = nextSymbol.trim().toUpperCase()
+      setSymbol(clean)
+      setOrder(prev => ({ ...prev, symbol: clean }))
+      const data = await loadBars(clean, nextInterval)
+      setBars(data)
+      setReplayIndex(Math.max(0, data.length - 1))
+      setTrades([])
+    } catch (err) {
+      setBars([])
+      setError(err.message || 'Unable to load market data.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => { load('AAPL', '1d') }, [])
-  const run = () => { if (!bars.length) return; const data = replay ? visibleBars : bars; setResult(runBacktest(data, { initialCapital: Number(startingCapital), riskPct: Number(order.sizePct), commissionPct: Number(order.commissionPct), slippageBps: Number(order.slippageBps), leverage: Number(order.leverage), side: order.side, stopLossPct: Number(order.stopPct), takeProfitPct: Number(order.targetPct), conditions })); setTab('results') }
-  const placeTrade = nextOrder => { if (!currentBar) return; const price = nextOrder.type === 'market' ? currentBar.close : Number(nextOrder.limitPrice); const qty = (Number(startingCapital) * Number(nextOrder.sizePct) / 100 * Number(nextOrder.leverage)) / price; setTrades(current => [{ id: Date.now(), symbol, side: nextOrder.side, price, qty, time: currentBar.time, status: 'OPEN', stop: nextOrder.stopPct, target: nextOrder.targetPct }, ...current]) }
-  const equityPoints = useMemo(() => result?.equity || [], [result]); const lastClose = currentBar?.close || 0; const lastChange = visibleBars.length > 1 ? ((lastClose / visibleBars.at(-2).close) - 1) * 100 : 0
-  return <main className="terminal"><header className="topbar"><div className="brand"><span className="logo">↗</span><div><strong>Backtest Lab</strong><small>HISTORICAL TRADING TERMINAL</small></div></div><div className="top-actions"><span className="market-dot" /> US stocks · simulated only <button className="reset" onClick={() => { setTrades([]); setResult(null) }}>Reset session</button></div></header><section className="commandbar"><div className="search"><span>⌕</span><input value={symbol} onChange={e => setSymbol(e.target.value)} onKeyDown={e => e.key === 'Enter' && load()} placeholder="Ticker e.g. AAPL" /><button onClick={() => load()}>{loading ? 'Loading…' : 'Load'}</button></div><div className="intervals">{INTERVALS.map(item => <button key={item.value} className={interval === item.value ? 'active' : ''} onClick={() => { setInterval(item.value); load(symbol, item.value) }}>{item.label}</button>)}</div></section>{error && <div className="alert"><b>Data source limitation</b><span>{error}</span><button onClick={() => load()}>Retry</button></div>}<section className="hero-row"><div><span className="eyebrow">HISTORICAL MARKET RESEARCH</span><h1>{symbol} <span className={lastChange >= 0 ? 'positive' : 'negative'}>{lastClose ? money(lastClose) : '—'} {lastClose ? `${lastChange >= 0 ? '+' : ''}${lastChange.toFixed(2)}%` : ''}</span></h1><p>Explore real historical OHLCV data, replay the tape, place paper trades and test rule-based strategies without risking money.</p></div><div className="mode-switch"><button className={!replay ? 'active' : ''} onClick={() => setReplay(false)}>Research</button><button className={replay ? 'active' : ''} onClick={() => { setReplay(true); setReplayIndex(Math.max(0, bars.length - 1)) }}>▶ Replay mode</button></div></section><div className="notice"><span>FREE DATA MODE</span><b>{selectedMeta.note}</b><small>1m–30m cannot honestly provide five years from the free Yahoo chart endpoint. The app keeps this limitation visible rather than pretending the data exists.</small></div><section className="workspace"><div className="chart-panel panel"><div className="panel-head"><div><span className="eyebrow">{replay ? 'REPLAY' : 'HISTORICAL CHART'}</span><h2>{symbol} · {selectedMeta.label}</h2></div><div className="chart-tools"><button className="tool" onClick={() => setActiveIndicators(active => active.includes('ema20') ? active.filter(x => x !== 'ema20') : [...active, 'ema20'])}>EMA 20</button><button className="tool" onClick={() => setActiveIndicators(active => active.includes('sma50') ? active.filter(x => x !== 'sma50') : [...active, 'sma50'])}>SMA 50</button><button className="tool" onClick={() => setActiveIndicators(active => active.includes('ema200') ? active.filter(x => x !== 'ema200') : [...active, 'ema200'])}>EMA 200</button></div></div><CandleChart bars={bars} replayIndex={replay ? replayIndex : Math.max(0, bars.length - 1)} setReplayIndex={setReplayIndex} order={order} setOrder={setOrder} activeIndicators={activeIndicators} /></div><OrderTicket order={order} setOrder={setOrder} currentPrice={lastClose} onTrade={placeTrade} /></section><section className="tabs"><button className={tab === 'chart' ? 'active' : ''} onClick={() => setTab('chart')}>Workspace</button><button className={tab === 'strategy' ? 'active' : ''} onClick={() => setTab('strategy')}>Strategy builder</button><button className={tab === 'results' ? 'active' : ''} onClick={() => setTab('results')}>Performance</button><button className={tab === 'trades' ? 'active' : ''} onClick={() => setTab('trades')}>Trades ({trades.length})</button></section>{tab === 'strategy' && <section className="lower panel"><StrategyBuilder conditions={conditions} setConditions={setConditions} /><div className="backtest-controls"><label>Starting capital<input type="number" value={startingCapital} onChange={e => setStartingCapital(e.target.value)} /></label><button className="run-button" onClick={run}>Run backtest →</button></div></section>}{tab === 'results' && <section className="lower panel"><div className="results-head"><div><span className="eyebrow">BACKTEST REPORT</span><h2>{symbol} · {interval} · {replay ? 'replay window' : 'full loaded window'}</h2></div><button className="run-button" onClick={run}>Re-run</button></div><Metrics result={result} />{result && <div className="result-grid"><div><h3>Equity curve</h3><div className="equity-chart"><svg viewBox="0 0 900 180" preserveAspectRatio="none">{equityPoints.length > 1 && <polyline points={equityPoints.map((p, i) => `${(i / (equityPoints.length - 1)) * 900},${170 - ((p.value - Math.min(...equityPoints.map(x => x.value))) / ((Math.max(...equityPoints.map(x => x.value)) - Math.min(...equityPoints.map(x => x.value))) || 1)) * 150}`).join(' ')} /></svg></div></div><div className="report-list"><p><span>Fees paid</span><b>{money(result.metrics.fees)}</b></p><p><span>Average win</span><b>{money(result.metrics.avgWin)}</b></p><p><span>Average loss</span><b>{money(result.metrics.avgLoss)}</b></p><p><span>Sortino</span><b>{result.metrics.sortino.toFixed(2)}</b></p></div></div>}</section>}{tab === 'trades' && <section className="lower panel"><div className="results-head"><div><span className="eyebrow">PAPER TRADES</span><h2>Replay execution ledger</h2></div></div><div className="trade-table"><div className="trade-head"><span>Side</span><span>Symbol</span><span>Entry</span><span>Qty</span><span>Time</span><span>Status</span></div>{trades.length ? trades.map(trade => <div className="trade-row" key={trade.id}><span className={trade.side === 'long' ? 'positive' : 'negative'}>{trade.side.toUpperCase()}</span><b>{trade.symbol}</b><span>{money(trade.price)}</span><span>{num(trade.qty)}</span><span>{fmtTime(trade.time)}</span><span className="paper-pill">{trade.status}</span></div>) : <div className="empty-row">No paper trades yet. Turn on Replay Mode and place a trade from the ticket.</div>}</div></section>}<footer><span>Backtest Lab · US equities · paper trading only</span><span>Historical results are not predictions or investment advice.</span></footer></main>
+
+  const run = () => {
+    if (!bars.length) return
+    const data = replay ? visibleBars : bars
+    setResult(runBacktest(data, { initialCapital: Number(startingCapital), riskPct: Number(order.sizePct), commissionPct: Number(order.commissionPct), slippageBps: Number(order.slippageBps), leverage: Number(order.leverage), side: order.side, stopLossPct: Number(order.stopPct), takeProfitPct: Number(order.targetPct), conditions }))
+    setTab('results')
+  }
+
+  const placeTrade = nextOrder => {
+    if (!currentBar) return
+    const price = nextOrder.type === 'market' ? currentBar.close : Number(nextOrder.limitPrice)
+    if (!Number.isFinite(price) || price <= 0) return
+    const qty = (Number(startingCapital) * Number(nextOrder.sizePct) / 100 * Number(nextOrder.leverage)) / price
+    setTrades(current => [{ id: Date.now(), symbol, side: nextOrder.side, price, qty, time: currentBar.time, status: 'OPEN', stop: nextOrder.stopPct, target: nextOrder.targetPct }, ...current])
+  }
+
+  const equityPoints = useMemo(() => result?.equity || [], [result])
+  const lastClose = currentBar?.close || 0
+  const lastChange = visibleBars.length > 1 ? ((lastClose / visibleBars.at(-2).close) - 1) * 100 : 0
+
+  return (
+    <main className="terminal">
+      <header className="topbar">
+        <div className="brand"><span className="logo">↗</span><div><strong>Backtest Lab</strong><small>HISTORICAL TRADING TERMINAL</small></div></div>
+        <div className="top-actions"><span className="market-dot" /> US stocks · simulated only <button className="reset" onClick={() => { setTrades([]); setResult(null) }}>Reset session</button></div>
+      </header>
+
+      <section className="commandbar">
+        <div className="search"><span>⌕</span><input value={symbol} onChange={e => setSymbol(e.target.value)} onKeyDown={e => e.key === 'Enter' && load()} placeholder="Ticker e.g. AAPL" /><button onClick={() => load()}>{loading ? 'Loading…' : 'Load'}</button></div>
+        <div className="intervals">{INTERVALS.map(item => <button key={item.value} className={interval === item.value ? 'active' : ''} onClick={() => { setInterval(item.value); load(symbol, item.value) }}>{item.label}</button>)}</div>
+      </section>
+
+      {error && <div className="alert"><b>Data source limitation</b><span>{error}</span><button onClick={() => load()}>Retry</button></div>}
+
+      <section className="hero-row">
+        <div><span className="eyebrow">HISTORICAL MARKET RESEARCH</span><h1>{symbol} <span className={lastChange >= 0 ? 'positive' : 'negative'}>{lastClose ? money(lastClose) : '—'} {lastClose ? `${lastChange >= 0 ? '+' : ''}${lastChange.toFixed(2)}%` : ''}</span></h1><p>Explore real historical OHLCV data, replay the tape, place paper trades and test rule-based strategies without risking money.</p></div>
+        <div className="mode-switch"><button className={!replay ? 'active' : ''} onClick={() => setReplay(false)}>Research</button><button className={replay ? 'active' : ''} onClick={() => { setReplay(true); setReplayIndex(Math.max(0, bars.length - 1)) }}>▶ Replay mode</button></div>
+      </section>
+
+      <div className="notice"><span>FREE DATA MODE</span><b>{selectedMeta.note}</b><small>1m–30m cannot honestly provide five years from the free Yahoo chart endpoint. The app keeps this limitation visible rather than pretending the data exists.</small></div>
+
+      <section className="workspace">
+        <div className="chart-panel panel">
+          <div className="panel-head"><div><span className="eyebrow">{replay ? 'REPLAY' : 'HISTORICAL CHART'}</span><h2>{symbol} · {selectedMeta.label}</h2></div><div className="chart-tools"><button className="tool" onClick={() => setActiveIndicators(active => active.includes('ema20') ? active.filter(x => x !== 'ema20') : [...active, 'ema20'])}>EMA 20</button><button className="tool" onClick={() => setActiveIndicators(active => active.includes('sma50') ? active.filter(x => x !== 'sma50') : [...active, 'sma50'])}>SMA 50</button><button className="tool" onClick={() => setActiveIndicators(active => active.includes('ema200') ? active.filter(x => x !== 'ema200') : [...active, 'ema200'])}>EMA 200</button></div></div>
+          <CandleChart bars={bars} replayIndex={replay ? replayIndex : Math.max(0, bars.length - 1)} setReplayIndex={setReplayIndex} order={order} setOrder={setOrder} activeIndicators={activeIndicators} />
+        </div>
+        <OrderTicket order={order} setOrder={setOrder} currentPrice={lastClose} onTrade={placeTrade} />
+      </section>
+
+      <section className="tabs"><button className={tab === 'chart' ? 'active' : ''} onClick={() => setTab('chart')}>Workspace</button><button className={tab === 'strategy' ? 'active' : ''} onClick={() => setTab('strategy')}>Strategy builder</button><button className={tab === 'results' ? 'active' : ''} onClick={() => setTab('results')}>Performance</button><button className={tab === 'trades' ? 'active' : ''} onClick={() => setTab('trades')}>Trades ({trades.length})</button></section>
+
+      {tab === 'strategy' && <section className="lower panel"><StrategyBuilder conditions={conditions} setConditions={setConditions} /><div className="backtest-controls"><label>Starting capital<input type="number" value={startingCapital} onChange={e => setStartingCapital(e.target.value)} /></label><button className="run-button" onClick={run}>Run backtest →</button></div></section>}
+
+      {tab === 'results' && <section className="lower panel"><div className="results-head"><div><span className="eyebrow">BACKTEST REPORT</span><h2>{symbol} · {interval} · {replay ? 'replay window' : 'full loaded window'}</h2></div><button className="run-button" onClick={run}>Re-run</button></div><Metrics result={result} />{result && <div className="result-grid"><div><h3>Equity curve</h3><div className="equity-chart"><svg viewBox="0 0 900 180" preserveAspectRatio="none">{equityPoints.length > 1 && <polyline points={equityPoints.map((p, i) => `${(i / (equityPoints.length - 1)) * 900},${170 - ((p.value - Math.min(...equityPoints.map(x => x.value))) / ((Math.max(...equityPoints.map(x => x.value)) - Math.min(...equityPoints.map(x => x.value))) || 1)) * 150}`).join(' ')} />}</svg></div></div><div className="report-list"><p><span>Fees paid</span><b>{money(result.metrics.fees)}</b></p><p><span>Average win</span><b>{money(result.metrics.avgWin)}</b></p><p><span>Average loss</span><b>{money(result.metrics.avgLoss)}</b></p><p><span>Sortino</span><b>{result.metrics.sortino.toFixed(2)}</b></p></div></div>}</section>}
+
+      {tab === 'trades' && <section className="lower panel"><div className="results-head"><div><span className="eyebrow">PAPER TRADES</span><h2>Replay execution ledger</h2></div></div><div className="trade-table"><div className="trade-head"><span>Side</span><span>Symbol</span><span>Entry</span><span>Qty</span><span>Time</span><span>Status</span></div>{trades.length ? trades.map(trade => <div className="trade-row" key={trade.id}><span className={trade.side === 'long' ? 'positive' : 'negative'}>{trade.side.toUpperCase()}</span><b>{trade.symbol}</b><span>{money(trade.price)}</span><span>{num(trade.qty)}</span><span>{fmtTime(trade.time)}</span><span className="paper-pill">{trade.status}</span></div>) : <div className="empty-row">No paper trades yet. Turn on Replay Mode and place a trade from the ticket.</div>}</div></section>}
+
+      <footer><span>Backtest Lab · US equities · paper trading only</span><span>Historical results are not predictions or investment advice.</span></footer>
+    </main>
+  )
 }
